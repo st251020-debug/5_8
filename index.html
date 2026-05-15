@@ -3,18 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>かわいいフルーツゲーム 🍉</title>
+    <title>おしゃれなカフェゲーム ☕</title>
     <!-- Tailwind CSS (スタイリング用) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Matter.js (物理エンジン) -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/matter-js/0.19.0/matter.min.js"></script>
-    <!-- Google Fonts (かわいいフォント) -->
-    <link href="https://fonts.googleapis.com/css2?family=M+PLUS+Rounded+1c:wght@700&display=swap" rel="stylesheet">
+    <!-- Google Fonts (おしゃれなフォント) -->
+    <link href="https://fonts.googleapis.com/css2?family=Quicksand:wght@600;700&family=Zen+Maru+Gothic:wght@500;700&display=swap" rel="stylesheet">
     
     <style>
         body {
-            font-family: 'M PLUS Rounded 1c', sans-serif;
-            background: linear-gradient(135deg, #ffe6f2, #e6f2ff);
+            font-family: 'Quicksand', 'Zen Maru Gothic', sans-serif;
+            background: linear-gradient(135deg, #f6f3eb, #e3dac9);
             margin: 0;
             overflow: hidden; /* スクロール防止 */
             touch-action: none; /* スワイプによるリロードなどを防止 */
@@ -22,18 +22,19 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
-            color: #555;
+            color: #5c4a40;
         }
 
         #game-container {
-            background-color: rgba(255, 255, 255, 0.8);
-            border: 6px solid #ffb3d9;
-            border-radius: 30px;
-            box-shadow: 0 10px 25px rgba(0,0,0,0.1);
+            background-color: rgba(255, 255, 255, 0.6);
+            backdrop-filter: blur(10px);
+            border: 4px solid #d4c5b9;
+            border-radius: 24px;
+            box-shadow: 0 15px 35px rgba(92, 74, 64, 0.1);
             position: relative;
             overflow: hidden;
-            width: 360px;
-            height: 600px;
+            width: 300px;
+            height: 500px;
         }
 
         canvas {
@@ -41,10 +42,11 @@
         }
 
         .bubble-ui {
-            background: white;
-            border: 3px solid #ffb3d9;
-            border-radius: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            background: rgba(255, 255, 255, 0.8);
+            border: 2px solid #d4c5b9;
+            border-radius: 16px;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            backdrop-filter: blur(5px);
         }
 
         /* ゲームオーバー画面のアニメーション */
@@ -61,14 +63,14 @@
 
     <div class="flex flex-col items-center">
         <!-- ヘッダー（スコア＆ネクスト） -->
-        <div class="flex justify-between w-[360px] mb-3 px-1">
+        <div class="flex justify-between w-[300px] mb-3 px-1">
             <div class="bubble-ui px-4 py-2 flex flex-col items-center justify-center min-w-[120px]">
-                <span class="text-xs text-pink-400 font-bold">SCORE</span>
-                <span id="score-display" class="text-2xl text-gray-700">0</span>
+                <span class="text-xs text-[#a38f80] font-bold tracking-widest">SCORE</span>
+                <span id="score-display" class="text-2xl text-[#5c4a40] font-bold">0</span>
             </div>
             <div class="bubble-ui px-4 py-2 flex flex-col items-center justify-center min-w-[100px]">
-                <span class="text-xs text-pink-400 font-bold">NEXT</span>
-                <span id="next-display" class="text-3xl mt-1">🍒</span>
+                <span class="text-xs text-[#a38f80] font-bold tracking-widest">NEXT</span>
+                <span id="next-display" class="text-3xl mt-1">🫘</span>
             </div>
         </div>
 
@@ -77,11 +79,11 @@
             <canvas id="game-canvas"></canvas>
             
             <!-- ゲームオーバー画面 -->
-            <div id="game-over-screen" class="absolute inset-0 bg-white/80 backdrop-blur-sm hidden flex-col items-center justify-center z-10">
+            <div id="game-over-screen" class="absolute inset-0 bg-[#f6f3eb]/90 backdrop-blur-md hidden flex-col items-center justify-center z-10">
                 <div class="pop-in text-center">
-                    <h2 class="text-4xl text-pink-500 mb-2">Game Over!</h2>
-                    <p class="text-lg text-gray-600 mb-6">スコア: <span id="final-score" class="font-bold text-2xl text-pink-500">0</span></p>
-                    <button onclick="resetGame()" class="bg-pink-400 hover:bg-pink-500 text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95">
+                    <h2 class="text-3xl text-[#8a705e] font-bold mb-2 font-['Quicksand']">Game Over</h2>
+                    <p class="text-md text-[#a38f80] mb-6">スコア: <span id="final-score" class="font-bold text-2xl text-[#d97c7c]">0</span></p>
+                    <button onclick="resetGame()" class="bg-[#c2aa96] hover:bg-[#a8907c] text-white font-bold py-3 px-8 rounded-full shadow-md transition-transform transform hover:scale-105 active:scale-95 tracking-wide">
                         もういちど遊ぶ
                     </button>
                 </div>
@@ -90,24 +92,24 @@
     </div>
 
 <script>
-    // --- フルーツの定義 ---
+    // --- カフェアイテムの定義（※プログラム上の変数名はfruitのまま流用しています） ---
     const FRUITS = [
-        { level: 0, radius: 15, emoji: '🍒', color: '#ffb3ba', points: 1 },    // さくらんぼ
-        { level: 1, radius: 25, emoji: '🍓', color: '#ffdfba', points: 3 },    // いちご
-        { level: 2, radius: 35, emoji: '🍇', color: '#e0baff', points: 6 },    // ぶどう
-        { level: 3, radius: 45, emoji: '🍊', color: '#ffffba', points: 10 },   // みかん
-        { level: 4, radius: 55, emoji: '🍋', color: '#baffc9', points: 15 },   // レモン
-        { level: 5, radius: 70, emoji: '🍎', color: '#ffb3ba', points: 21 },   // りんご
-        { level: 6, radius: 85, emoji: '🍏', color: '#baffc9', points: 28 },   // 青りんご
-        { level: 7, radius: 100, emoji: '🍑', color: '#ffdfba', points: 36 },  // もも
-        { level: 8, radius: 120, emoji: '🍍', color: '#ffffba', points: 45 },  // パイナップル
-        { level: 9, radius: 140, emoji: '🍈', color: '#baffc9', points: 55 },  // メロン
-        { level: 10, radius: 160, emoji: '🍉', color: '#ffb3ba', points: 66 }  // スイカ
+        { level: 0, radius: 13, emoji: '🫘', color: '#EFE5DC', points: 1 },    // コーヒー豆
+        { level: 1, radius: 21, emoji: '🍬', color: '#F4E1E1', points: 3 },    // キャンディ
+        { level: 2, radius: 30, emoji: '🍪', color: '#E8D5C4', points: 6 },    // クッキー
+        { level: 3, radius: 38, emoji: '🥐', color: '#DDBEA9', points: 10 },   // クロワッサン
+        { level: 4, radius: 47, emoji: '☕', color: '#C5B09E', points: 15 },   // コーヒー
+        { level: 5, radius: 60, emoji: '🍮', color: '#FFF1E6', points: 21 },   // プリン
+        { level: 6, radius: 72, emoji: '🍩', color: '#D5C7BC', points: 28 },   // ドーナツ
+        { level: 7, radius: 85, emoji: '🧁', color: '#EAD2D2', points: 36 },  // カップケーキ
+        { level: 8, radius: 102, emoji: '🍰', color: '#E2C0C0', points: 45 },  // ケーキ
+        { level: 9, radius: 119, emoji: '🥞', color: '#E8CCB0', points: 55 },  // パンケーキ
+        { level: 10, radius: 136, emoji: '🎂', color: '#CBAEAE', points: 66 }  // ホールケーキ
     ];
 
     // --- ゲームの設定 ---
-    const GAME_WIDTH = 360;
-    const GAME_HEIGHT = 600;
+    const GAME_WIDTH = 300;
+    const GAME_HEIGHT = 500;
     const WALL_THICKNESS = 100;  // すり抜け防止のために厚くする
     const DROP_Y = 50;           // フルーツを落とすY座標
     const DEADLINE_Y = 100;      // ゲームオーバーライン
@@ -318,7 +320,7 @@
         ctx.setLineDash([10, 10]);
         ctx.moveTo(0, DEADLINE_Y);
         ctx.lineTo(GAME_WIDTH, DEADLINE_Y);
-        ctx.strokeStyle = 'rgba(255, 100, 150, 0.5)';
+        ctx.strokeStyle = 'rgba(163, 143, 128, 0.5)';
         ctx.lineWidth = 3;
         ctx.stroke();
         ctx.setLineDash([]); // 元に戻す
@@ -368,7 +370,7 @@
         ctx.stroke();
 
         // 絵文字を描画
-        ctx.font = `${data.radius * 1.2}px 'M PLUS Rounded 1c'`;
+        ctx.font = `${data.radius * 1.2}px 'Zen Maru Gothic', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         // 絵文字によっては少し上にずれるのを補正
