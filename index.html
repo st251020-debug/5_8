@@ -2,8 +2,17 @@
 <html lang="ja">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <!-- スマホでの拡大縮小を禁止し、アプリのように固定する -->
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    
+    <!-- PWA / アプリ化のためのメタタグ -->
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="theme-color" content="#f6f3eb">
+    <meta name="description" content="同じアイテムをくっつけて進化させる、おしゃれなカフェゲームです。">
+    
     <title>おしゃれなカフェゲーム ☕</title>
+    
     <!-- Tailwind CSS (スタイリング用) -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- Matter.js (物理エンジン) -->
@@ -22,31 +31,48 @@
             justify-content: center;
             align-items: center;
             height: 100vh;
+            height: 100dvh; /* スマホのアドレスバーを考慮した高さ */
             color: #5c4a40;
+            user-select: none; /* テキスト選択防止 */
+            -webkit-user-select: none;
+        }
+
+        #game-wrapper {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            width: 100%;
+            max-width: 400px; /* スマホサイズの上限 */
         }
 
         #game-container {
             background-color: rgba(255, 255, 255, 0.6);
             backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
             border: 4px solid #d4c5b9;
             border-radius: 24px;
-            box-shadow: 0 15px 35px rgba(92, 74, 64, 0.1);
+            box-shadow: 0 15px 35px rgba(92, 74, 64, 0.15);
             position: relative;
             overflow: hidden;
-            width: 300px;
-            height: 500px;
+            width: 240px;
+            height: 400px;
+            /* タッチデバイスでのハイライトを消す */
+            -webkit-tap-highlight-color: transparent; 
         }
 
         canvas {
             display: block;
+            width: 100%;
+            height: 100%;
         }
 
         .bubble-ui {
-            background: rgba(255, 255, 255, 0.8);
+            background: rgba(255, 255, 255, 0.85);
             border: 2px solid #d4c5b9;
             border-radius: 16px;
-            box-shadow: 0 4px 10px rgba(0,0,0,0.03);
+            box-shadow: 0 4px 10px rgba(0,0,0,0.05);
             backdrop-filter: blur(5px);
+            -webkit-backdrop-filter: blur(5px);
         }
 
         /* ゲームオーバー画面のアニメーション */
@@ -57,20 +83,73 @@
         .pop-in {
             animation: popIn 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275) forwards;
         }
+
+        /* スクロールバーを隠す用のクラス */
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+
+        /* 背景アイコンのアニメーション */
+        @keyframes float1 {
+            0%, 100% { transform: translateY(0px) rotate(-10deg); }
+            50% { transform: translateY(-15px) rotate(-5deg); }
+        }
+        @keyframes float2 {
+            0%, 100% { transform: translateY(0px) rotate(15deg); }
+            50% { transform: translateY(-20px) rotate(25deg); }
+        }
+        @keyframes float3 {
+            0%, 100% { transform: translateY(0px) rotate(-25deg); }
+            50% { transform: translateY(-15px) rotate(-15deg); }
+        }
+        .bg-icon-1 { animation: float1 7s ease-in-out infinite; }
+        .bg-icon-2 { animation: float2 9s ease-in-out infinite; }
+        .bg-icon-3 { animation: float3 8s ease-in-out infinite; }
     </style>
 </head>
 <body>
 
-    <div class="flex flex-col items-center">
-        <!-- ヘッダー（スコア＆ネクスト） -->
-        <div class="flex justify-between w-[300px] mb-3 px-1">
-            <div class="bubble-ui px-4 py-2 flex flex-col items-center justify-center min-w-[120px]">
-                <span class="text-xs text-[#a38f80] font-bold tracking-widest">SCORE</span>
-                <span id="score-display" class="text-2xl text-[#5c4a40] font-bold">0</span>
+    <!-- 背景の装飾イラスト -->
+    <div class="fixed inset-0 pointer-events-none z-[-1] overflow-hidden flex justify-center">
+        <!-- 画面幅に合わせて配置範囲を制限 -->
+        <div class="relative w-full max-w-[500px] h-full text-[#c2aa96] opacity-30">
+            <!-- コーヒー -->
+            <div class="absolute top-[12%] left-[2%] w-24 h-24 bg-icon-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M10 2v2"/><path d="M14 2v2"/><path d="M16 8a1 1 0 0 1 1 1v8a4 4 0 0 1-4 4H7a4 4 0 0 1-4-4V9a1 1 0 0 1 1-1h14a4 4 0 1 1 0 8h-1"/><path d="M6 2v2"/></svg>
             </div>
-            <div class="bubble-ui px-4 py-2 flex flex-col items-center justify-center min-w-[100px]">
-                <span class="text-xs text-[#a38f80] font-bold tracking-widest">NEXT</span>
-                <span id="next-display" class="text-3xl mt-1">🫘</span>
+            <!-- ケーキ -->
+            <div class="absolute bottom-[25%] right-[2%] w-20 h-20 bg-icon-2" style="animation-delay: -2s;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M20 21v-8a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8"/><path d="M4 16s.5-1 2-1 2.5 2 4 2 2.5-2 4-2 2.5 2 4 2 2-1 2-1"/><path d="M2 21h20"/><path d="M7 8v3"/><path d="M12 8v3"/><path d="M17 8v3"/><path d="M7 4h.01"/><path d="M12 4h.01"/><path d="M17 4h.01"/></svg>
+            </div>
+            <!-- フォークとナイフ -->
+            <div class="absolute top-[60%] left-[3%] w-16 h-16 bg-icon-3" style="animation-delay: -4s;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M3 2v7c0 1.1.9 2 2 2h4a2 2 0 0 0 2-2V2"/><path d="M7 2v20"/><path d="M21 15V2v0a5 5 0 0 0-5 5v6c0 1.1.9 2 2 2h3Zm0 0v7"/></svg>
+            </div>
+            <!-- 葉っぱ -->
+            <div class="absolute top-[8%] right-[8%] w-16 h-16 bg-icon-2" style="animation-delay: -5s;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+            </div>
+            <!-- ドーナツ -->
+            <div class="absolute bottom-[10%] left-[12%] w-16 h-16 bg-icon-1" style="animation-delay: -3s;">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" class="w-full h-full"><path d="M12 22a10 10 0 1 0 0-20 10 10 0 0 0 0 20z"/><path d="M12 15a3 3 0 1 0 0-6 3 3 0 0 0 0 6z"/></svg>
+            </div>
+        </div>
+    </div>
+
+    <div id="game-wrapper">
+        <!-- ヘッダー（スコア＆ネクスト） -->
+        <div class="flex justify-between w-[240px] mb-3 px-1">
+            <div class="bubble-ui px-3 py-2 flex flex-col items-center justify-center min-w-[90px]">
+                <span class="text-[10px] text-[#a38f80] font-bold tracking-widest">SCORE</span>
+                <span id="score-display" class="text-xl text-[#5c4a40] font-bold">0</span>
+            </div>
+            <div class="bubble-ui px-3 py-2 flex flex-col items-center justify-center min-w-[80px]">
+                <span class="text-[10px] text-[#a38f80] font-bold tracking-widest">NEXT</span>
+                <span id="next-display" class="text-2xl mt-1 leading-none">🫘</span>
             </div>
         </div>
 
@@ -79,49 +158,55 @@
             <canvas id="game-canvas"></canvas>
             
             <!-- ゲームオーバー画面 -->
-            <div id="game-over-screen" class="absolute inset-0 bg-[#f6f3eb]/90 backdrop-blur-md hidden flex-col items-center justify-center z-10">
-                <div class="pop-in text-center">
-                    <h2 class="text-3xl text-[#8a705e] font-bold mb-2 font-['Quicksand']">Game Over</h2>
-                    <p class="text-md text-[#a38f80] mb-6">スコア: <span id="final-score" class="font-bold text-2xl text-[#d97c7c]">0</span></p>
-                    <button onclick="resetGame()" class="bg-[#c2aa96] hover:bg-[#a8907c] text-white font-bold py-3 px-8 rounded-full shadow-md transition-transform transform hover:scale-105 active:scale-95 tracking-wide">
+            <div id="game-over-screen" class="absolute inset-0 bg-[#f6f3eb]/95 backdrop-blur-md hidden flex-col items-center justify-center z-10">
+                <div class="pop-in text-center flex flex-col items-center">
+                    <h2 class="text-3xl text-[#8a705e] font-bold mb-3 font-['Quicksand'] tracking-wide">Game Over</h2>
+                    <div class="bg-white/80 px-5 py-2 rounded-2xl mb-6 border border-[#e3dac9]">
+                        <p class="text-xs text-[#a38f80] mb-1 font-bold">最終スコア</p>
+                        <p id="final-score" class="font-bold text-3xl text-[#d97c7c]">0</p>
+                    </div>
+                    <button onclick="resetGame()" class="bg-[#c2aa96] hover:bg-[#a8907c] text-white font-bold py-3 px-8 rounded-full shadow-lg transition-transform transform hover:scale-105 active:scale-95 tracking-wider text-base">
                         もういちど遊ぶ
                     </button>
                 </div>
             </div>
         </div>
+
+        <!-- 進化ガイド -->
+        <div class="mt-3 w-[240px] bubble-ui px-3 py-2 overflow-x-auto whitespace-nowrap hide-scrollbar shadow-sm">
+            <div id="evolution-guide" class="flex items-center space-x-2 w-max"></div>
+        </div>
     </div>
 
 <script>
-    // --- カフェアイテムの定義（※プログラム上の変数名はfruitのまま流用しています） ---
+    // --- カフェアイテムの定義 ---
     const FRUITS = [
-        { level: 0, radius: 13, emoji: '🫘', color: '#EFE5DC', points: 1 },    // コーヒー豆
-        { level: 1, radius: 21, emoji: '🍬', color: '#F4E1E1', points: 3 },    // キャンディ
-        { level: 2, radius: 30, emoji: '🍪', color: '#E8D5C4', points: 6 },    // クッキー
-        { level: 3, radius: 38, emoji: '🥐', color: '#DDBEA9', points: 10 },   // クロワッサン
-        { level: 4, radius: 47, emoji: '☕', color: '#C5B09E', points: 15 },   // コーヒー
-        { level: 5, radius: 60, emoji: '🍮', color: '#FFF1E6', points: 21 },   // プリン
-        { level: 6, radius: 72, emoji: '🍩', color: '#D5C7BC', points: 28 },   // ドーナツ
-        { level: 7, radius: 85, emoji: '🧁', color: '#EAD2D2', points: 36 },  // カップケーキ
-        { level: 8, radius: 102, emoji: '🍰', color: '#E2C0C0', points: 45 },  // ケーキ
-        { level: 9, radius: 119, emoji: '🥞', color: '#E8CCB0', points: 55 },  // パンケーキ
-        { level: 10, radius: 136, emoji: '🎂', color: '#CBAEAE', points: 66 }  // ホールケーキ
+        { level: 0, radius: 10, emoji: '🫘', color: '#EFE5DC', points: 1 },    // コーヒー豆
+        { level: 1, radius: 17, emoji: '🍬', color: '#F4E1E1', points: 3 },    // キャンディ
+        { level: 2, radius: 24, emoji: '🍪', color: '#E8D5C4', points: 6 },    // クッキー
+        { level: 3, radius: 30, emoji: '🥐', color: '#DDBEA9', points: 10 },   // クロワッサン
+        { level: 4, radius: 38, emoji: '☕', color: '#C5B09E', points: 15 },   // コーヒー
+        { level: 5, radius: 48, emoji: '🍮', color: '#FFF1E6', points: 21 },   // プリン
+        { level: 6, radius: 58, emoji: '🍩', color: '#D5C7BC', points: 28 },   // ドーナツ
+        { level: 7, radius: 68, emoji: '🧁', color: '#EAD2D2', points: 36 },  // カップケーキ
+        { level: 8, radius: 82, emoji: '🍰', color: '#E2C0C0', points: 45 },  // ケーキ
+        { level: 9, radius: 95, emoji: '🥞', color: '#E8CCB0', points: 55 },  // パンケーキ
+        { level: 10, radius: 109, emoji: '🎂', color: '#CBAEAE', points: 66 }  // ホールケーキ
     ];
 
     // --- ゲームの設定 ---
-    const GAME_WIDTH = 300;
-    const GAME_HEIGHT = 500;
+    const GAME_WIDTH = 240;
+    const GAME_HEIGHT = 400;
     const WALL_THICKNESS = 100;  // すり抜け防止のために厚くする
-    const DROP_Y = 50;           // フルーツを落とすY座標
-    const DEADLINE_Y = 100;      // ゲームオーバーライン
+    const DROP_Y = 40;           // フルーツを落とすY座標
+    const DEADLINE_Y = 80;      // ゲームオーバーライン
     
     // --- Matter.js モジュール ---
     const Engine = Matter.Engine,
-          Render = Matter.Render,
           Runner = Matter.Runner,
           Bodies = Matter.Bodies,
           Composite = Matter.Composite,
-          Events = Matter.Events,
-          Body = Matter.Body;
+          Events = Matter.Events;
 
     let engine;
     let world;
@@ -134,6 +219,11 @@
     let isGameOver = false;
     let canDrop = true;
     let fruitBodies = []; // キャンバス上に存在するフルーツの配列
+
+    // --- エフェクト用配列 ---
+    let particles = [];
+    let floatingTexts = [];
+    let warningFlash = 0; // 警告線の点滅用
 
     // --- HTML要素 ---
     const canvas = document.getElementById('game-canvas');
@@ -156,7 +246,6 @@
         engine.gravity.y = 0.8;
 
         // 壁と床の作成（見えないように配置）
-        // 角の丸みや重みによる見切れを防ぐため、床を25px上、壁を5px内側に配置
         const padBottom = 25;
         const padSide = 5;
         const ground = Bodies.rectangle(GAME_WIDTH / 2, GAME_HEIGHT - padBottom + WALL_THICKNESS / 2, GAME_WIDTH, WALL_THICKNESS, { isStatic: true });
@@ -168,17 +257,38 @@
         // 衝突イベントの設定
         Events.on(engine, 'collisionStart', handleCollision);
 
-        // ゲームループ（カスタム描画）の設定
+        // ゲームループの設定
         runner = Runner.create();
         Runner.run(runner, engine);
         
         requestAnimationFrame(renderLoop);
 
         // 入力イベントの設定
+        // マウス
         canvas.addEventListener('mousemove', handlePointerMove);
-        canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
         canvas.addEventListener('mousedown', handlePointerDown);
+        
+        // タッチ (スマホアプリ向け)
+        canvas.addEventListener('touchmove', handlePointerMove, { passive: false });
         canvas.addEventListener('touchstart', handlePointerDown, { passive: false });
+
+        // 右クリックメニューや長押しメニューを禁止
+        canvas.addEventListener('contextmenu', e => e.preventDefault());
+
+        // 進化ガイドの生成
+        const evolutionGuide = document.getElementById('evolution-guide');
+        FRUITS.forEach((f, index) => {
+            const span = document.createElement('span');
+            span.innerText = f.emoji;
+            span.className = 'text-xl';
+            evolutionGuide.appendChild(span);
+            if (index < FRUITS.length - 1) {
+                const arrow = document.createElement('span');
+                arrow.innerText = '>';
+                arrow.className = 'text-xs text-[#a38f80] font-bold opacity-50';
+                evolutionGuide.appendChild(arrow);
+            }
+        });
 
         generateNextFruit();
     }
@@ -192,7 +302,7 @@
     // --- ポインター（マウス・タッチ）の移動 ---
     function handlePointerMove(e) {
         if (isGameOver || !canDrop) return;
-        e.preventDefault(); // スクロール防止
+        if(e.cancelable) e.preventDefault(); // スクロール防止
 
         let clientX;
         if (e.touches && e.touches.length > 0) {
@@ -202,19 +312,21 @@
         }
 
         const rect = canvas.getBoundingClientRect();
-        // X座標をキャンバス内に収める（フルーツの半径分だけ余白を設ける）
+        // 画面の拡大縮小を考慮して実際のキャンバス座標に変換
+        const scaleX = canvas.width / rect.width;
+        
+        let x = (clientX - rect.left) * scaleX;
         const radius = FRUITS[nextFruitLevel].radius;
-        currentFruitX = clientX - rect.left;
-        currentFruitX = Math.max(radius, Math.min(currentFruitX, GAME_WIDTH - radius));
+        
+        currentFruitX = Math.max(radius, Math.min(x, GAME_WIDTH - radius));
     }
 
     // --- クリック・タップでフルーツを落とす ---
     function handlePointerDown(e) {
         if (isGameOver || !canDrop) return;
-        e.preventDefault();
+        if(e.cancelable) e.preventDefault();
         
-        handlePointerMove(e); // 位置を更新してから落とす
-
+        handlePointerMove(e); // 位置を最新に更新
         dropFruit();
     }
 
@@ -233,7 +345,7 @@
         // 独自のプロパティを付与
         body.fruitLevel = fruitData.level;
         body.isNew = true; // 落ちたばかりのフラグ（ゲームオーバー判定用）
-        setTimeout(() => { body.isNew = false; }, 1000); // 1秒後にフラグ解除
+        setTimeout(() => { if(body) body.isNew = false; }, 1000); // 1秒後にフラグ解除
 
         Composite.add(world, body);
         fruitBodies.push(body);
@@ -244,6 +356,26 @@
         setTimeout(() => {
             if (!isGameOver) canDrop = true;
         }, 800);
+    }
+
+    // --- エフェクトの生成 ---
+    function createParticles(x, y, color) {
+        for (let i = 0; i < 12; i++) {
+            particles.push({
+                x: x, y: y,
+                vx: (Math.random() - 0.5) * 12,
+                vy: (Math.random() - 0.5) * 12,
+                radius: Math.random() * 5 + 3,
+                color: color,
+                alpha: 1
+            });
+        }
+    }
+
+    function createFloatingText(x, y, text) {
+        floatingTexts.push({
+            x: x, y: y, text: text, alpha: 1, vy: -2
+        });
     }
 
     // --- 衝突処理（フルーツの進化） ---
@@ -260,12 +392,12 @@
             if (bodyA.label === 'fruit' && bodyB.label === 'fruit') {
                 if (bodyA.fruitLevel === bodyB.fruitLevel) {
                     
-                    // 既にこのフレームで処理済みのボディならスキップ（多重合体防止）
+                    // 既にこのフレームで処理済みのボディならスキップ
                     if (bodiesToRemove.has(bodyA) || bodiesToRemove.has(bodyB)) continue;
 
                     const currentLevel = bodyA.fruitLevel;
                     
-                    // 最大レベル(スイカ)同士の合体は消滅するか、何もしない（今回は何もしない）
+                    // 最大レベル同士の合体はこれ以上進化しない
                     if (currentLevel >= FRUITS.length - 1) continue;
 
                     // 削除リストに追加
@@ -280,8 +412,11 @@
 
                     // スコア加算
                     score += fruitData.points;
-                    scoreDisplay.innerText = score;
-
+                    
+                    // エフェクト生成
+                    createParticles(newX, newY, fruitData.color);
+                    createFloatingText(newX, newY, `+${fruitData.points}`);
+                    
                     // 新しいボディを作成
                     const newBody = Bodies.circle(newX, newY, fruitData.radius, {
                         restitution: 0.2,
@@ -298,11 +433,17 @@
         // ワールドの更新（削除と追加）
         if (bodiesToRemove.size > 0) {
             Composite.remove(world, Array.from(bodiesToRemove));
-            // fruitBodies配列からも削除
+            // 配列からも削除
             fruitBodies = fruitBodies.filter(b => !bodiesToRemove.has(b));
             
             Composite.add(world, bodiesToAdd);
             fruitBodies.push(...bodiesToAdd);
+            
+            // スコア表示の更新（少しアニメーション効果を入れるとより良い）
+            scoreDisplay.innerText = score;
+            scoreDisplay.style.transform = 'scale(1.2)';
+            setTimeout(() => { scoreDisplay.style.transform = 'scale(1)'; }, 100);
+            scoreDisplay.style.transition = 'transform 0.1s ease-out';
         }
     }
 
@@ -315,13 +456,42 @@
         // 背景クリア
         ctx.clearRect(0, 0, GAME_WIDTH, GAME_HEIGHT);
 
-        // ゲームオーバーラインの描画（可愛く点線で）
+        // 物理エンジン上のフルーツを描画・判定
+        let isOverDeadline = false;
+        let isWarning = false; // ピンチ状態のフラグ
+
+        for (let body of fruitBodies) {
+            const fruitData = FRUITS[body.fruitLevel];
+            drawFruit(body.position.x, body.position.y, body.angle, fruitData);
+
+            // ゲームオーバー・警告判定
+            // 落ちたばかりではなく、静止気味の場合
+            if (!body.isNew && body.velocity.y < 0.5 && body.velocity.y > -0.5) {
+                const topY = body.position.y - fruitData.radius;
+                if (topY < DEADLINE_Y) {
+                    isOverDeadline = true;
+                } else if (topY < DEADLINE_Y + 35) { // ラインに近づいていたら警告
+                    isWarning = true;
+                }
+            }
+        }
+
+        // ゲームオーバーラインの描画（警告時は赤く点滅）
         ctx.beginPath();
-        ctx.setLineDash([10, 10]);
+        ctx.setLineDash([8, 8]);
         ctx.moveTo(0, DEADLINE_Y);
         ctx.lineTo(GAME_WIDTH, DEADLINE_Y);
-        ctx.strokeStyle = 'rgba(163, 143, 128, 0.5)';
-        ctx.lineWidth = 3;
+        
+        if (isWarning) {
+            warningFlash += 0.1;
+            const alpha = (Math.sin(warningFlash) + 1) / 2 * 0.6 + 0.2; // 0.2 ~ 0.8で明滅
+            ctx.strokeStyle = `rgba(217, 124, 124, ${alpha})`; // 赤色
+            ctx.lineWidth = 3;
+        } else {
+            warningFlash = 0;
+            ctx.strokeStyle = 'rgba(163, 143, 128, 0.4)'; // 通常の茶色
+            ctx.lineWidth = 2;
+        }
         ctx.stroke();
         ctx.setLineDash([]); // 元に戻す
 
@@ -330,21 +500,53 @@
             ctx.globalAlpha = 0.5; // 半透明
             drawFruit(currentFruitX, DROP_Y, 0, FRUITS[nextFruitLevel]);
             ctx.globalAlpha = 1.0;
+            
+            // ガイドライン（うっすら縦線）
+            ctx.beginPath();
+            ctx.moveTo(currentFruitX, DROP_Y + FRUITS[nextFruitLevel].radius);
+            ctx.lineTo(currentFruitX, GAME_HEIGHT);
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.lineWidth = 2;
+            ctx.stroke();
         }
 
-        // 物理エンジン上のフルーツを描画
-        let isOverDeadline = false;
-
-        for (let body of fruitBodies) {
-            const fruitData = FRUITS[body.fruitLevel];
-            drawFruit(body.position.x, body.position.y, body.angle, fruitData);
-
-            // ゲームオーバー判定
-            // 落ちたばかり(isNew)ではなく、静止気味で、ラインを越えている場合
-            if (!body.isNew && body.position.y - fruitData.radius < DEADLINE_Y && body.velocity.y < 0.5 && body.velocity.y > -0.5) {
-                isOverDeadline = true;
+        // --- エフェクトの描画 ---
+        // パーティクル
+        for (let i = particles.length - 1; i >= 0; i--) {
+            let p = particles[i];
+            p.x += p.vx;
+            p.y += p.vy;
+            p.alpha -= 0.04;
+            if (p.alpha <= 0) {
+                particles.splice(i, 1);
+                continue;
             }
+            ctx.globalAlpha = p.alpha;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fillStyle = p.color;
+            ctx.fill();
         }
+        
+        // フローティングテキスト
+        for (let i = floatingTexts.length - 1; i >= 0; i--) {
+            let ft = floatingTexts[i];
+            ft.y += ft.vy;
+            ft.alpha -= 0.025;
+            if (ft.alpha <= 0) {
+                floatingTexts.splice(i, 1);
+                continue;
+            }
+            ctx.globalAlpha = ft.alpha;
+            ctx.fillStyle = '#d97c7c';
+            ctx.font = 'bold 26px "Quicksand", sans-serif';
+            ctx.textAlign = 'center';
+            ctx.lineWidth = 4;
+            ctx.strokeStyle = '#fff'; // 白フチをつけて見やすく
+            ctx.strokeText(ft.text, ft.x, ft.y);
+            ctx.fillText(ft.text, ft.x, ft.y);
+        }
+        ctx.globalAlpha = 1.0;
 
         // ゲームオーバー処理
         if (isOverDeadline && !isGameOver) {
@@ -358,23 +560,23 @@
         ctx.translate(x, y);
         ctx.rotate(angle);
 
-        // フルーツの背景の丸を描画（パステルカラー）
+        // フルーツの背景の丸を描画
         ctx.beginPath();
         ctx.arc(0, 0, data.radius, 0, 2 * Math.PI);
         ctx.fillStyle = data.color;
         ctx.fill();
         
         // 丸のフチを白で少し描く
-        ctx.lineWidth = 2;
-        ctx.strokeStyle = 'rgba(255, 255, 255, 0.8)';
+        ctx.lineWidth = 3;
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.7)';
         ctx.stroke();
 
         // 絵文字を描画
-        ctx.font = `${data.radius * 1.2}px 'Zen Maru Gothic', sans-serif`;
+        ctx.font = `${data.radius * 1.1}px 'Zen Maru Gothic', sans-serif`;
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        // 絵文字によっては少し上にずれるのを補正
-        ctx.fillText(data.emoji, 0, data.radius * 0.1); 
+        // iOS等での絵文字のズレを少し補正
+        ctx.fillText(data.emoji, 0, data.radius * 0.05); 
 
         ctx.restore();
     }
@@ -399,6 +601,11 @@
         scoreDisplay.innerText = 0;
         isGameOver = false;
         canDrop = true;
+        
+        // エフェクトのリセット
+        particles = [];
+        floatingTexts = [];
+        warningFlash = 0;
         
         gameOverScreen.classList.add('hidden');
         gameOverScreen.classList.remove('flex');
